@@ -36,18 +36,29 @@ def main(yolo):
         if foundBoxes:
             if not grabbedShirt:
                 box=foundBoxes[0]
+                tracker=cv2.TrackerKCF_create()
+                tracker.init(frame,tuple(box[0]-10,box[1]-10,box[2]-10,box[3]-10))
+                '''
                 for x in range(-10,10):
                     for y in range(-10,10):
                         lockedRGB=list(map(add, lockedRGB, frame[box[1]+y+box[3]//2][box[0]+x+box[2]//2]))
                 #lockedRGB=frame[box[1]+box[3]//2][box[0]+box[2]//2]
                 lockedRGB=[lockedRGB[0]//400, lockedRGB[1]//400, lockedRGB[2]//400]
                 print(lockedRGB)
+                '''
+                
                 grabbedShirt=1
                 #TODO do moving avg for color 
             else:
+                (success,box)=tracker.update(frame)
+                if success:
+                    (x, y, w, h) = [int(v) for v in box]
+                    cv2.rectangle(frame, (x, y), (x + w, y + h),
+                                  (0, 255, 0), 2)
                 for box in foundBoxes:
                     #draw box
                     cv2.rectangle(frame, (box[0]-10+box[2]//2, box[1]-10+box[3]//2), (box[0]+10+box[2]//2, box[1]+10+box[3]//2), (0,255,0),2)
+                    '''
                     rgbval=[0,0,0]
                     for x in range(-10,10):
                         for y in range(-10,10):
@@ -57,6 +68,7 @@ def main(yolo):
                     distanceSquared = ((rgbval[0]-lockedRGB[0])**2 + (rgbval[1]-lockedRGB[1])**2 +(rgbval[2]-lockedRGB[2])**2)  
                     distance = math.sqrt(distanceSquared)
                     print('Distance between locked: ',lockedRGB, ' and ', rgbval,' is: ',distance)
+                    '''
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     pf.disable()
