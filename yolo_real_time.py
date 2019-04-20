@@ -13,11 +13,17 @@ from multiprocessing import Process, Queue
 
 
 def serialHandler(ser,q):
-    box=[0.0,0.0]
+    box, distance, angle = None, None, None
     while True:
         if not q.empty():
             box = q.get()
-        distance,angle=angleCalc(box)
+            
+            #found person
+            if box != None:
+                distance,angle=angleCalc(box)
+            else:
+                distance, angle = None, None
+        
         if ser.in_waiting:
             serial_read = "Receoved " + ser.read(ser.in_waiting)
             #ser.write(serial_read.encode('UTF-8'))
@@ -33,7 +39,6 @@ def main(yolo):
     # Change the com to what the pi connects to the computer as
     pf=cProfile.Profile()
     pf.enable()
-    com_ser.write("Ready\n")
     vid = cv2.VideoCapture(0)
     
     q = Queue()
@@ -55,6 +60,8 @@ def main(yolo):
         #TODO: only grabbing first of the found boxes
         if foundBoxes:
             q.put(foundBoxes[0])
+        else:
+            q.put(None)
             
         if yolo.draw:
             result = np.asarray(image)
