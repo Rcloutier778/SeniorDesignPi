@@ -9,41 +9,71 @@ import numpy as np
 from PIL import Image
 import cProfile
 import serial
-import math
-import colormath
-from operator import add
+from multiprocessing import Process, Queue
+
+
+def serialHandler(ser,q):
+    box=[0.0,0.0]
+    while True:
+        if not q.empty():
+            box = q.get()
+        distance,angle=angleCalc(box)
+        if ser.in_waiting:
+            serial_read = "Receoved " + ser.read(ser.in_waiting)
+            #ser.write(serial_read.encode('UTF-8'))
+            ser.write(str(distance))
+            ser.write(0)
+            ser.write(str(angle))
+            ser.write(0)
+            ser.reset_input_buffer()
+        
 
 def main(yolo):
-    #ser = serial.Serial('/dev/ttyS0',baudrate=9600, timeout=3.0)
+    ser = serial.Serial('/dev/serial0',baudrate=9600, timeout=3.0)
+    # Change the com to what the pi connects to the computer as
     pf=cProfile.Profile()
     pf.enable()
+    com_ser.write("Ready\n")
     vid = cv2.VideoCapture(0)
-    grabbedShirt=0
-    lockedRGB=[0,0,0]
+    
+    q = Queue()
+    p = Process(target=serialHandler, args=(ser,q,))
+    p.start()
     while True:
         for i in range(4):
             vid.grab()
         _, frame = vid.read()
-        try:
-            image = Image.fromarray(frame)
-        except AttributeError as e:
-            raise("Webcam isn't plugged in.")
+        while True:
+            try:
+                image = Image.fromarray(frame)
+                break
+            except AttributeError as e:
+                print("Webcam isn't plugged in?")
+        
         image, foundBoxes = yolo.detect_image(image)
-        result = np.asarray(image)
+        
+        #TODO: only grabbing first of the found boxes
+        if foundBoxes:
+            q.put(foundBoxes[0])
+            
         if yolo.draw:
+            result = np.asarray(image)
             cv2.namedWindow("result", cv2.WINDOW_NORMAL)
             cv2.imshow("result", result)
         if cv2.waitKey(1) & 0xFF == ord('q'):
             break
     pf.disable()
     pf.print_stats('cumtime')
+    p.join()
     yolo.close_session()
     return 0
 
 
 def angleCalc(box):
     #TODO
-    return 0
+    distance=0
+    angle=0
+    return distance,angle
 
 
 
