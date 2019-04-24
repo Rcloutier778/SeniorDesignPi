@@ -146,14 +146,13 @@ class YOLO(object):
         thickness = (image.size[0] + image.size[1]) // 300
         
         foundBoxes=[]
-
         for i, c in reversed(list(enumerate(out_classes))):
             predicted_class = self.class_names[c]
-            if not self.all_classes and predicted_class != 'person':
-                continue
             box = out_boxes[i]
             score = out_scores[i]
 
+            if not self.all_classes and predicted_class != 'person':
+                continue
             label = '{} {:.2f}'.format(predicted_class, score)
             if self.draw:
                 draw = ImageDraw.Draw(image)
@@ -167,7 +166,7 @@ class YOLO(object):
             if self.verbose:
                 print(label, (left, top), (right, bottom))
             
-            foundBoxes.append([left,top,right-left,bottom-top])
+            foundBoxes.append([left,top,right-left,bottom-top,score])
 
             if self.draw:
                 if top - label_size[1] >= 0:
@@ -176,19 +175,25 @@ class YOLO(object):
                     text_origin = np.array([left, top + 1])
 
                 # My kingdom for a good redistributable image drawing library.
+                if score == max(out_scores):
+                    useColor=self.colors[c]
+                else:
+                    useColor=self.colors[1]
                 for i in range(thickness):
                     draw.rectangle(
                         [left + i, top + i, right - i, bottom - i],
-                        outline=self.colors[c])
+                        outline=useColor)
                 draw.rectangle(
                     [tuple(text_origin), tuple(text_origin + label_size)],
-                    fill=self.colors[c])
+                    fill=useColor)
                 draw.text(text_origin, label, fill=(0, 0, 0), font=font)
                 del draw
 
         end = timer()
         if self.verbose:
             print(end - start)
+        if foundBoxes:
+            foundBoxes=sorted(foundBoxes,key=lambda x: x[4], reverse=True)[0][:-1]
         return image, foundBoxes
 
     def close_session(self):
